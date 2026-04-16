@@ -14,7 +14,6 @@ terraform {
     resource_group_name   = "bicep-rg"
     storage_account_name  = "terraformsa16nf"
     container_name        = "terraform-state-container"
-    key                   = "state.tfstate"
   }
 }
 
