@@ -1,0 +1,53 @@
+trigger:
+ branches:
+   exclude:
+    - feature/terraform-backend
+   include:
+     - master
+pool:
+  name: 'Default'
+  demands:
+    - terraform 
+
+variables:
+ Subscription: 
+
+stages:
+- stage: 
+  jobs:
+    - job: 'init'
+      steps:
+      - task: TerraformTaskV4@4
+        displayName: 'initializing'
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          backendServiceArm: 'ADO-2-Azure-Connection'
+          backendAzureRmResourceGroupName: 'bicep-rg'
+          backendAzureRmStorageAccountName: 'statesa1'
+          backendAzureRmContainerName: 'terraformsa16nf'
+          backendAzureRmKey: 'terraform-state-container'
+
+      - task: TerraformTaskV4@4
+        displayName: 'validation'
+        inputs:
+          provider: 'azurerm'
+          command: 'validate'
+
+   
+      - task: TerraformTaskV4@4
+        displayName: 'plan'
+        inputs:
+            provider: 'azurerm'
+            command: 'plan'
+            commandOptions: '-out=tfplan'
+            
+
+      - task: TerraformTaskV4@4
+        displayName: 'apply'
+        inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            commandOptions: '-auto-approve tfplan'
+
+    
