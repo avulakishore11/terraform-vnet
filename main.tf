@@ -11,9 +11,9 @@ terraform {
 
 terraform {
   backend "azurerm" {
-    resource_group_name   = "bicep-rg"
-    storage_account_name  = "terraformsa16nf"
-    container_name        = "terraform-state-container"
+    resource_group_name   = "rg-tf-state"
+    storage_account_name  = "terrastatesa"
+    container_name        = "tfstate"
   }
 }
 

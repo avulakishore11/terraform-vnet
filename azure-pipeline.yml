@@ -5,7 +5,7 @@ trigger:
    include:
      - master
 pool:
-  name: 'Default'
+  name: 'terraform-pool'
   demands:
     - terraform 
 
@@ -17,8 +17,7 @@ stages:
   jobs:
     - job: 'init'
       steps:
-      - task: TerraformTaskV4@4
-        displayName: 'initializing'
+      - task: TerraformTask@5
         inputs:
           provider: 'azurerm'
           command: 'init'
@@ -26,29 +25,25 @@ stages:
           backendAzureRmResourceGroupName: 'bicep-rg'
           backendAzureRmStorageAccountName: 'terraformsa16nf'
           backendAzureRmContainerName: 'terraform-state-container'
-          backendAzureRmKey: 'terraform.tfstate'
+          backendAzureRmKey: 'terraform-state-container'
 
       - task: TerraformTaskV4@4
         displayName: 'validation'
         inputs:
           provider: 'azurerm'
           command: 'validate'
-
-   
-      - task: TerraformTaskV4@4
-        displayName: 'plan'
+      - task: TerraformTask@5
         inputs:
             provider: 'azurerm'
             command: 'plan'
-            environmentServiceNameAzureRM: 'ADO-2-Azure-Connection'
             commandOptions: '-out=tfplan'
+            
 
       - task: TerraformTaskV4@4
         displayName: 'apply'
         inputs:
             provider: 'azurerm'
             command: 'apply'
-            environmentServiceNameAzureRM: 'ADO-2-Azure-Connection'
             commandOptions: '-auto-approve tfplan'
 
     
