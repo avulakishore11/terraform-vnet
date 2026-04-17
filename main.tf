@@ -14,6 +14,7 @@ terraform {
     resource_group_name   = "rg-tf-state"
     storage_account_name  = "terrastatesa"
     container_name        = "tfstate"
+    key                   = "vnet.tfstate"
   }
 }
 
