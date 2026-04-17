@@ -26,7 +26,7 @@ stages:
           backendAzureRmResourceGroupName: 'bicep-rg'
           backendAzureRmStorageAccountName: 'terraformsa16nf'
           backendAzureRmContainerName: 'terraform-state-container'
-          backendAzureRmKey: 'terraform-state-container'
+          backendAzureRmKey: 'terraform.tfstate'
 
       - task: TerraformTaskV4@4
         displayName: 'validation'
@@ -40,14 +40,15 @@ stages:
         inputs:
             provider: 'azurerm'
             command: 'plan'
+            environmentServiceNameAzureRM: 'ADO-2-Azure-Connection'
             commandOptions: '-out=tfplan'
-            
 
       - task: TerraformTaskV4@4
         displayName: 'apply'
         inputs:
             provider: 'azurerm'
             command: 'apply'
+            environmentServiceNameAzureRM: 'ADO-2-Azure-Connection'
             commandOptions: '-auto-approve tfplan'
 
     
