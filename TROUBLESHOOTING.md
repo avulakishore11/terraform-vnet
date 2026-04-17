@@ -13,6 +13,8 @@ Merge with strategy ort failed.
 
 **Cause:** Local uncommitted changes to `main.tf` conflicted with incoming remote changes.
 
+**Why it happens:** Git's merge strategy (`ort`) refuses to overwrite files that have unsaved local edits to protect you from losing work. When you run `git pull`, Git tries to merge the remote branch into your local branch. If the same file was changed both locally and remotely, Git cannot safely auto-merge without risking data loss — so it aborts.
+
 **Fix:** Choose one of the following:
 ```bash
 # Option 1 — Stash local changes, pull, then reapply
@@ -39,7 +41,9 @@ git pull origin master
 Error: Input required: environmentServiceNameAzureRM
 ```
 
-**Cause:** The `validate`, `plan`, and `apply` Terraform tasks in `azure-pipeline.yml` were missing the `environmentServiceNameAzureRM` input, which is required for any task that authenticates against Azure.
+**Cause:** The `validate`, `plan`, and `apply` Terraform tasks in `azure-pipeline.yml` were missing the `environmentServiceNameAzureRM` input.
+
+**Why it happens:** The `TerraformTask` extension requires an Azure Service Connection for any command that communicates with Azure (plan, apply, validate). This connection provides the credentials (Service Principal) that Terraform uses to authenticate against the Azure Resource Manager API. Without it, the task has no way to know which Azure subscription or identity to use, so it fails immediately before executing any Terraform command.
 
 **Fix:** Added `environmentServiceNameAzureRM` to all three tasks in `azure-pipeline.yml`:
 ```yaml
@@ -67,6 +71,8 @@ A name must start with a letter or underscore and may contain only letters, digi
 
 **Cause:** Malformed resource block — a stray quote after `resource` and missing `azurerm_` prefix on the resource type.
 
+**Why it happens:** Terraform's HCL syntax requires the `resource` keyword to be followed by a space and then a quoted string containing the full provider-prefixed resource type (e.g., `"azurerm_resource_group"`). When the quote is placed immediately after `resource` with no space, the parser reads `resource"` as an invalid token. Additionally, all Azure resource types must include the `azurerm_` prefix — it is how Terraform maps the resource to the correct provider plugin.
+
 **Fix:**
 ```hcl
 # Before (broken)
@@ -87,7 +93,9 @@ ResourceGroupNotFound: Resource group 'terraform-rg' could not be found.
   with azurerm_virtual_network.vnet, on main.tf line 31
 ```
 
-**Cause:** The VNet and subnet resources used hardcoded string `"terraform-rg"` instead of referencing the Terraform-managed resource group, so Terraform had no way to infer the dependency order.
+**Cause:** The VNet and subnet resources used hardcoded string `"terraform-rg"` instead of referencing the Terraform-managed resource group.
+
+**Why it happens:** Terraform builds a dependency graph to determine the order in which resources are created. When you use a hardcoded string like `"terraform-rg"`, Terraform sees no relationship between the VNet and the resource group — so it may try to create both in parallel or create the VNet before the resource group exists. Azure then returns a `ResourceGroupNotFound` error because the target resource group hasn't been provisioned yet. Using resource references (e.g., `azurerm_resource_group.rg.name`) tells Terraform explicitly that the VNet depends on the RG, enforcing the correct creation order.
 
 **Fix:** Replace hardcoded strings with resource references and add `depends_on`:
 ```hcl
@@ -107,4 +115,5 @@ resource "azurerm_subnet" "subnet" {
 }
 ```
 
-**Additional fix:** Corrected invalid CIDR `10.0.0.0/32` (single IP — unusable as a VNet address space) to `10.1.0.0/16`.
+**Additional fix — Invalid CIDR `10.0.0.0/32`:**
+A `/32` prefix means only a single IP address, which is not a valid address space for a Virtual Network. Azure requires a CIDR range large enough to accommodate subnets. Corrected to `10.1.0.0/16`, which provides 65,536 addresses and fits the subnet `10.1.0.0/26`.
