@@ -24,6 +24,7 @@ stages:
           backendServiceArm: 'ado-2-azure'
           backendAzureRmStorageAccountName: 'terrastatesa'
           backendAzureRmContainerName: 'tfstate'
+          backendAzureRmKey: "tfstate"
       - task: TerraformTask@5
         inputs:
           provider: 'azurerm'
