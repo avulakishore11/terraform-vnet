@@ -30,14 +30,15 @@ resource "azurerm_resource_group" "rg" {
 
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet"
-  location            = "eastus"
-  resource_group_name = "terraform-rg"
-  address_space       = ["10.0.0.0/32"]
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  address_space       = ["10.1.0.0/16"]
+  depends_on          = [azurerm_resource_group.rg]
 }
 
 resource "azurerm_subnet" "subnet" {
   name                 = "subnet"
-  resource_group_name  = "terraform-rg"
+  resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/26"]
+  address_prefixes     = ["10.1.0.0/26"]
 }
