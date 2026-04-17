@@ -21,11 +21,11 @@ stages:
         inputs:
           provider: 'azurerm'
           command: 'init'
-          backendServiceArm: 'ADO-2-Azure-Connection'
-          backendAzureRmResourceGroupName: 'bicep-rg'
-          backendAzureRmStorageAccountName: 'terraformsa16nf'
-          backendAzureRmContainerName: 'terraform-state-container'
-          backendAzureRmKey: 'terraform-state-container'
+          backendServiceArm: 'ado-2-azure'
+          backendAzureRmResourceGroupName: 'rg-tf-state'
+          backendAzureRmStorageAccountName: 'terrastatesa'
+          backendAzureRmContainerName: 'tfstate'
+          backendAzureRmKey: 'vnet.tfstate' #  filename of the Terraform state file that gets stored inside your blob container.
 
       - task: TerraformTaskV4@4
         displayName: 'validation'
