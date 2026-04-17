@@ -23,7 +23,7 @@ provider "azurerm" {
 
 }
 
-resource" resource_group" "rg" {
+resource "azurerm_resource_group" "rg" {
   name     = "terraform-rg"
   location = "eastus"
 }
