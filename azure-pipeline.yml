@@ -49,4 +49,12 @@ stages:
             commandOptions: '-auto-approve tfplan'
             environmentServiceNameAzureRM: 'ado-2-azure'
 
+      - task: TerraformTaskV4@4
+        displayName: 'destroy'
+        inputs:
+            provider: 'azurerm'
+            command: 'destroy'
+            commandOptions: '-auto-approve'
+            environmentServiceNameAzureRM: 'ado-2-azure'
+
     
