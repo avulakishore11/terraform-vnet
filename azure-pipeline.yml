@@ -50,6 +50,7 @@ stages:
         backendAzureRmStorageAccountName: $(backendStorageAccount)
         backendAzureRmContainerName: $(backendContainer)
         backendAzureRmKey: $(stateKey)
+        commandOptions: '-backend-config="use_azuread_auth=true"'
 
     - task: TerraformTaskV4@4
       displayName: 'Validate (Dev)'
@@ -108,6 +109,7 @@ stages:
               backendAzureRmStorageAccountName: $(backendStorageAccount)
               backendAzureRmContainerName: $(backendContainer)
               backendAzureRmKey: $(stateKey)
+              commandOptions: '-backend-config="use_azuread_auth=true"'
 
           - task: TerraformTaskV4@4
             displayName: 'Validate (Test)'
@@ -166,6 +168,7 @@ stages:
               backendAzureRmStorageAccountName: $(backendStorageAccount)
               backendAzureRmContainerName: $(backendContainer)
               backendAzureRmKey: $(stateKey)
+              commandOptions: '-backend-config="use_azuread_auth=true"'
 
           - task: TerraformTaskV4@4
             displayName: 'Validate (Prod)'
