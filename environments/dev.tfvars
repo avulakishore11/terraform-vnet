@@ -40,7 +40,7 @@ routes = [
 vm_size        = "Standard_B2s"
 admin_username = "azureadmin"
 
-os_disk_size_gb              = 64
+os_disk_size_gb              = 128
 os_disk_storage_account_type = "StandardSSD_LRS"
 
 data_disk_size_gb              = 64
