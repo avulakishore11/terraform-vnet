@@ -37,7 +37,7 @@ routes = [
 ]
 
 # Smaller/cheaper SKUs for dev
-vm_size        = "Standard_B2s"
+vm_size        = "Standard_B2ms"
 admin_username = "azureadmin"
 
 os_disk_size_gb              = 128
