@@ -17,6 +17,8 @@ variables:
   environment: 'dev'
   varFile: 'environments/dev.tfvars'
   stateKey: 'dev/terraform.tfstate'
+  vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
+  vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
 
 # ── Stage template (reused for dev / test / prod) ─────────────────────────────
 # Each stage calls init → validate → plan → apply using the env-specific

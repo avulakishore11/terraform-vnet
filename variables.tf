@@ -95,7 +95,6 @@ variable "vm_size" {
 variable "admin_username" {
   description = "Local administrator username"
   type        = string
-  default     = "azureadmin"
 }
 
 variable "admin_password" {
