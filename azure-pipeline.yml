@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - master
+      - feature/updated-with-all-code
 
 pool:
   name: 'terraform-pool'
@@ -13,10 +13,10 @@ variables:
   backendResourceGroup: 'rg-tf-state'
   backendStorageAccount: 'terrastatesa'
   backendContainer: 'tfstate'
+  stateKey: 'dev/terraform.tfstate'
   # These variables are used in each stage; they get overridden with env-specific values there
   environment: 'dev'
   varFile: 'environments/dev.tfvars'
-  stateKey: 'dev/terraform.tfstate'
   vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
   vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
 
@@ -84,6 +84,8 @@ stages:
     environment: 'test'
     varFile: 'environments/test.tfvars'
     stateKey: 'test/terraform.tfstate'
+    vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
+    vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
 
   jobs:
   - deployment: TerraformTest
@@ -140,6 +142,8 @@ stages:
     environment: 'prod'
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'
+    vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
+    vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
 
   jobs:
   - deployment: TerraformProd
