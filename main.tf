@@ -23,7 +23,7 @@ module "subnet" {
 }
 
 module "network_security_group" {
-  source              = "./modules/network_security_groupcccccbtjgtclgnkhrfuilfufud"
+  source              = "./modules/network_security_group"
   nsg_name            = "${var.project}-nsg-${var.environment}"
   location            = var.location
   resource_group_name = module.resource_group.name

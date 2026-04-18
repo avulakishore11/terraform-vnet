@@ -1,60 +1,184 @@
 trigger:
- branches:
-   exclude:
-    - feature/terraform-backend
-   include:
-     - master
+  branches:
+    include:
+      - master
+
 pool:
   name: 'terraform-pool'
   demands:
-    - terraform 
+    - terraform
 
 variables:
- Subscription: 
+  serviceConnection: 'ado-2-azure'
+  backendResourceGroup: 'rg-tf-state'
+  backendStorageAccount: 'terrastatesa'
+  backendContainer: 'tfstate'
+  # These variables are used in each stage; they get overridden with env-specific values there
+  environment: 'dev'
+  varFile: 'environments/dev.tfvars'
+  stateKey: 'dev/terraform.tfstate'
+
+# ── Stage template (reused for dev / test / prod) ─────────────────────────────
+# Each stage calls init → validate → plan → apply using the env-specific
+# .tfvars file and a separate state key so environments never share state.
+# admin_password is pulled from an Azure DevOps secret variable group.
+# ─────────────────────────────────────────────────────────────────────────────
 
 stages:
-- stage: 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DEV  — runs automatically on every merge to master
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: Dev
+  displayName: 'Deploy to Dev'
+  
+
   jobs:
-    - job: 'init'
-      steps:
-      - task: TerraformTask@5
-        inputs:
-          provider: 'azurerm'
-          command: 'init'
-          backendServiceArm: 'ado-2-azure'
-          backendAzureRmResourceGroupName: 'rg-tf-state'
-          backendAzureRmStorageAccountName: 'terrastatesa'
-          backendAzureRmContainerName: 'tfstate'
-          backendAzureRmKey: 'vnet.tfstate' #  filename of the Terraform state file that gets stored inside your blob container.
+  - job: TerraformDev
+    displayName: 'Terraform Dev'
+    steps:
 
-      - task: TerraformTaskV4@4
-        displayName: 'validation'
-        inputs:
-          provider: 'azurerm'
-          command: 'validate'
+    - task: TerraformTaskV4@4
+      displayName: 'Init (Dev)'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: $(serviceConnection)
+        backendAzureRmResourceGroupName: $(backendResourceGroup)
+        backendAzureRmStorageAccountName: $(backendStorageAccount)
+        backendAzureRmContainerName: $(backendContainer)
+        backendAzureRmKey: $(stateKey)
 
-      - task: TerraformTask@5
-        inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            commandOptions: '-out=tfplan'
-            environmentServiceNameAzureRM: 'ado-2-azure'
-            
+    - task: TerraformTaskV4@4
+      displayName: 'Validate (Dev)'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
 
-      - task: TerraformTaskV4@4
-        displayName: 'apply'
-        inputs:
-            provider: 'azurerm'
-            command: 'apply'
-            commandOptions: '-auto-approve tfplan'
-            environmentServiceNameAzureRM: 'ado-2-azure'
+    - task: TerraformTaskV4@4
+      displayName: 'Plan (Dev)'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        commandOptions: '-var-file=$(varFile) -var="admin_password=$(TF_VAR_admin_password)" -out=tfplan-dev'
+        environmentServiceNameAzureRM: $(serviceConnection)
 
-      - task: TerraformTaskV4@4
-        displayName: 'destroy'
-        inputs:
-            provider: 'azurerm'
-            command: 'destroy'
-            commandOptions: '-auto-approve'
-            environmentServiceNameAzureRM: 'ado-2-azure'
+    - task: TerraformTaskV4@4
+      displayName: 'Apply (Dev)'
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        commandOptions: '-auto-approve tfplan-dev'
+        environmentServiceNameAzureRM: $(serviceConnection)
 
-    
+# ══════════════════════════════════════════════════════════════════════════════
+# TEST — runs after Dev succeeds; requires manual approval
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: Test
+  displayName: 'Deploy to Test'
+  dependsOn: Dev
+  condition: succeeded('Dev')
+  variables:
+    environment: 'test'
+    varFile: 'environments/test.tfvars'
+    stateKey: 'test/terraform.tfstate'
+
+  jobs:
+  - deployment: TerraformTest
+    displayName: 'Terraform Test'
+    environment: 'test'          # <-- create this environment in ADO → Pipelines → Environments; add an approval gate there
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: self
+
+          - task: TerraformTaskV4@4
+            displayName: 'Init (Test)'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: $(serviceConnection)
+              backendAzureRmResourceGroupName: $(backendResourceGroup)
+              backendAzureRmStorageAccountName: $(backendStorageAccount)
+              backendAzureRmContainerName: $(backendContainer)
+              backendAzureRmKey: $(stateKey)
+
+          - task: TerraformTaskV4@4
+            displayName: 'Validate (Test)'
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+
+          - task: TerraformTaskV4@4
+            displayName: 'Plan (Test)'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              commandOptions: '-var-file=$(varFile) -var="admin_password=$(TF_VAR_admin_password)" -out=tfplan-test'
+              environmentServiceNameAzureRM: $(serviceConnection)
+
+          - task: TerraformTaskV4@4
+            displayName: 'Apply (Test)'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              commandOptions: '-auto-approve tfplan-test'
+              environmentServiceNameAzureRM: $(serviceConnection)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROD — runs after Test succeeds; requires manual approval
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: Prod
+  displayName: 'Deploy to Prod'
+  dependsOn: Test
+  condition: succeeded('Test')
+  variables:
+    environment: 'prod'
+    varFile: 'environments/prod.tfvars'
+    stateKey: 'prod/terraform.tfstate'
+
+  jobs:
+  - deployment: TerraformProd
+    displayName: 'Terraform Prod'
+    environment: 'prod'          # <-- create this environment in ADO → Pipelines → Environments; add an approval gate there
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: self
+
+          - task: TerraformTaskV4@4
+            displayName: 'Init (Prod)'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: $(serviceConnection)
+              backendAzureRmResourceGroupName: $(backendResourceGroup)
+              backendAzureRmStorageAccountName: $(backendStorageAccount)
+              backendAzureRmContainerName: $(backendContainer)
+              backendAzureRmKey: $(stateKey)
+
+          - task: TerraformTaskV4@4
+            displayName: 'Validate (Prod)'
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+
+          - task: TerraformTaskV4@4
+            displayName: 'Plan (Prod)'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              commandOptions: '-var-file=$(varFile) -var="admin_password=$(TF_VAR_admin_password)" -out=tfplan-prod'
+              environmentServiceNameAzureRM: $(serviceConnection)
+
+          - task: TerraformTaskV4@4
+            displayName: 'Apply (Prod)'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              commandOptions: '-auto-approve tfplan-prod'
+              environmentServiceNameAzureRM: $(serviceConnection)
