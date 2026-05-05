@@ -4,9 +4,8 @@ trigger:
       - feature/updated-with-all-code
 
 pool:
-  name: 'terraform-pool'
-  demands:
-    - terraform
+  name: 'ubuntu-image'
+    # - terraform
 
 variables:
 - group: Windows_VM_Credentials   # contains: admin_username (plain) and admin_password (secret)
