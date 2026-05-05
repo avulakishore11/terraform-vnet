@@ -9,16 +9,21 @@ pool:
     - terraform
 
 variables:
-  serviceConnection: 'ado-2-azure'
-  backendResourceGroup: 'rg-tf-state'
-  backendStorageAccount: 'terrastatesa'
-  backendContainer: 'tfstate'
-  stateKey: 'dev/terraform.tfstate'
-  # These variables are used in each stage; they get overridden with env-specific values there
-  environment: 'dev'
-  varFile: 'environments/dev.tfvars'
-  vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
-  vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
+- group: Windows_VM_Credentials   # contains: admin_username (plain) and admin_password (secret)
+- name: serviceConnection
+  value: 'ado-2-azure'
+- name: backendResourceGroup
+  value: 'rg-tf-state'
+- name: backendStorageAccount
+  value: 'saeusterrasta01'
+- name: backendContainer
+  value: 'tfstate'
+- name: stateKey
+  value: 'dev/terraform.tfstate'
+- name: environment
+  value: 'dev'
+- name: varFile
+  value: 'environments/dev.tfvars'
 
 # ── Stage template (reused for dev / test / prod) ─────────────────────────────
 # Each stage calls init → validate → plan → apply using the env-specific
@@ -63,7 +68,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'plan'
-        commandOptions: '-var-file=$(varFile) -var="admin_password=$(TF_VAR_admin_password)" -out=tfplan-dev'
+        commandOptions: '-var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
 
     - task: TerraformTaskV4@4
@@ -85,8 +90,6 @@ stages:
     environment: 'test'
     varFile: 'environments/test.tfvars'
     stateKey: 'test/terraform.tfstate'
-    vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
-    vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
 
   jobs:
   - deployment: TerraformTest
@@ -122,7 +125,7 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              commandOptions: '-var-file=$(varFile) -var="admin_password=$(TF_VAR_admin_password)" -out=tfplan-test'
+              commandOptions: '-var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-test'
               environmentServiceNameAzureRM: $(serviceConnection)
 
           - task: TerraformTaskV4@4
@@ -144,8 +147,6 @@ stages:
     environment: 'prod'
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'
-    vmAdminPassword: $(TF_VAR_admin_password)   # <-- set this secret variable in your pipeline or variable group; prefix with TF_VAR_ to pass it through to Terraform
-    vmAdminUsername: $(TF_VAR_admin_username)                    # <-- this is a non-secret variable, so we can set it here at the top level
 
   jobs:
   - deployment: TerraformProd
@@ -181,7 +182,7 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              commandOptions: '-var-file=$(varFile) -var="admin_password=$(TF_VAR_admin_password)" -out=tfplan-prod'
+              commandOptions: '-var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-prod'
               environmentServiceNameAzureRM: $(serviceConnection)
 
           - task: TerraformTaskV4@4
