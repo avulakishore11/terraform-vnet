@@ -1,13 +1,36 @@
+locals {
+  location_abbr = {
+    "eastus"             = "eus"
+    "eastus2"            = "eus2"
+    "westus"             = "wus"
+    "westus2"            = "wus2"
+    "centralus"          = "cus"
+    "northcentralus"     = "ncus"
+    "southcentralus"     = "scus"
+    "northeurope"        = "neu"
+    "westeurope"         = "weu"
+    "uksouth"            = "uks"
+    "ukwest"             = "ukw"
+    "australiaeast"      = "aue"
+    "australiasoutheast" = "ause"
+    "southeastasia"      = "sea"
+    "eastasia"           = "ea"
+  }
+  # suffix = {location_abbr}-{project}{environment}-{instance}
+  # full name = {resource_type}{suffix}  e.g. vmeus-winvmdev-01
+  suffix = "${local.location_abbr[var.location]}-${var.project}${var.environment}-${var.instance}"
+}
+
 module "resource_group" {
   source   = "./modules/resource_group"
-  name     = var.resource_group_name
+  name     = "rg${local.suffix}"
   location = var.location
   tags     = var.tags
 }
 
 module "virtual_network" {
   source              = "./modules/virtual_network"
-  vnet_name           = "${var.project}-vnet-${var.environment}"
+  vnet_name           = "vnet${local.suffix}"
   location            = var.location
   resource_group_name = module.resource_group.name
   address_space       = var.vnet_address_space
@@ -16,7 +39,7 @@ module "virtual_network" {
 
 module "subnet" {
   source               = "./modules/subnet"
-  subnet_name          = "${var.project}-subnet-${var.environment}"
+  subnet_name          = "snet${local.suffix}"
   resource_group_name  = module.resource_group.name
   virtual_network_name = module.virtual_network.name
   address_prefixes     = var.subnet_address_prefixes
@@ -24,7 +47,7 @@ module "subnet" {
 
 module "network_security_group" {
   source              = "./modules/network_security_group"
-  nsg_name            = "${var.project}-nsg-${var.environment}"
+  nsg_name            = "nsg${local.suffix}"
   location            = var.location
   resource_group_name = module.resource_group.name
   subnet_id           = module.subnet.id
@@ -34,7 +57,7 @@ module "network_security_group" {
 
 module "route_table" {
   source              = "./modules/route_table"
-  route_table_name    = "${var.project}-rt-${var.environment}"
+  route_table_name    = "rt${local.suffix}"
   location            = var.location
   resource_group_name = module.resource_group.name
   subnet_id           = module.subnet.id
@@ -44,7 +67,7 @@ module "route_table" {
 
 module "network_interface" {
   source              = "./modules/network_interface"
-  nic_name            = "${var.project}-nic-${var.environment}"
+  nic_name            = "nic${local.suffix}"
   location            = var.location
   resource_group_name = module.resource_group.name
   subnet_id           = module.subnet.id
@@ -53,7 +76,7 @@ module "network_interface" {
 
 module "virtual_machine" {
   source              = "./modules/virtual_machine"
-  vm_name             = "${var.project}-vm-${var.environment}"
+  vm_name             = "vm${local.suffix}"
   location            = var.location
   resource_group_name = module.resource_group.name
   vm_size             = var.vm_size
@@ -74,13 +97,13 @@ module "virtual_machine" {
 }
 
 module "managed_disk" {
-  source              = "./modules/managed_disk"
-  disk_name           = "${var.project}-datadisk-${var.environment}"
-  location            = var.location
-  resource_group_name = module.resource_group.name
+  source               = "./modules/managed_disk"
+  disk_name            = "disk${local.suffix}"
+  location             = var.location
+  resource_group_name  = module.resource_group.name
   storage_account_type = var.data_disk_storage_account_type
-  disk_size_gb        = var.data_disk_size_gb
-  vm_id               = module.virtual_machine.id
-  lun                 = var.data_disk_lun
-  tags                = var.tags
+  disk_size_gb         = var.data_disk_size_gb
+  vm_id                = module.virtual_machine.id
+  lun                  = var.data_disk_lun
+  tags                 = var.tags
 }
