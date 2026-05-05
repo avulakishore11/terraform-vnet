@@ -5,7 +5,6 @@ trigger:
 
 pool:
   vmImage: ubuntu-latest
-    # - terraform
 
 variables:
 - group: Windows_VM_Credentials   # contains: admin_username (plain) and admin_password (secret)
@@ -33,22 +32,20 @@ variables:
 stages:
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DEV  — runs automatically on every merge to master
+# DEV  — runs automatically on every push to feature/updated-with-all-code
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: Dev
   displayName: 'Deploy to Dev'
-  
 
   jobs:
   - job: TerraformDev
     displayName: 'Terraform Dev'
     steps:
 
-# trying to install terraform for MSH for image
-    - task = TerraformInstaller@0
+    - task: TerraformInstaller@1
       displayName: 'Install Terraform'
       inputs:
-        terraformVersion: '1.15.1'
+        terraformVersion: 'latest'
 
     - task: TerraformTaskV4@4
       displayName: 'Init (Dev)'
@@ -99,13 +96,18 @@ stages:
   jobs:
   - deployment: TerraformTest
     displayName: 'Terraform Test'
-    environment: 'test'          # <-- create this environment in ADO → Pipelines → Environments; add an approval gate there
+    environment: 'test'
     strategy:
       runOnce:
         deploy:
           steps:
 
           - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
 
           - task: TerraformTaskV4@4
             displayName: 'Init (Test)'
@@ -156,13 +158,18 @@ stages:
   jobs:
   - deployment: TerraformProd
     displayName: 'Terraform Prod'
-    environment: 'prod'          # <-- create this environment in ADO → Pipelines → Environments; add an approval gate there
+    environment: 'prod'
     strategy:
       runOnce:
         deploy:
           steps:
 
           - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
 
           - task: TerraformTaskV4@4
             displayName: 'Init (Prod)'
