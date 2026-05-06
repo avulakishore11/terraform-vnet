@@ -18,6 +18,11 @@ locals {
   # Built-in policy definition IDs (immutable Azure platform GUIDs)
   policy_require_tag_on_resources       = "/providers/Microsoft.Authorization/policyDefinitions/871b6d14-10aa-478d-b590-94f262ecfa99"
   policy_require_tag_on_resource_groups = "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025"
+
+  # "Schedule recurring updates using Azure Update Manager"
+  policy_schedule_updates = "/providers/Microsoft.Authorization/policyDefinitions/ba0df93e-e4ac-479a-aac2-134bbae39a1a"
+  # "Configure periodic checking for missing system updates on azure virtual machines"
+  policy_check_missing_updates = "/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15"
 }
 
 # Enforce required tags on every resource
@@ -45,5 +50,89 @@ resource "azurerm_subscription_policy_assignment" "require_tag_resource_groups" 
 
   parameters = jsonencode({
     tagName = { value = each.key }
+  })
+}
+
+# ── Azure Update Manager Policies ─────────────────────────────────────────────
+# Both policies assigned at subscription scope.
+# Verify policy GUIDs in Azure Portal → Policy → Definitions before applying.
+#
+# Policy 1: Schedule Windows updates EastUS – RING 1
+#   DeployIfNotExists → requires SystemAssigned identity to auto-remediate VMs.
+#   enforce=false → DoNotEnforce (audit-only).
+#
+# Policy 2: Check for missing system updates
+#   AuditIfNotExists → no identity needed, enforce=true (active).
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "azurerm_role_assignment" "policy_remediation_contributor" {
+  scope                = data.azurerm_subscription.current.id
+  role_definition_name = "Contributor"
+  principal_id         = module.policy_remediation_identity.principal_id
+}
+
+resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring1" {
+  name                 = "ka-sched-win-upd-eus-r1"
+  display_name         = "KA-Schedule Windows updates EastUS - RING 1"
+  description          = "Schedule Windows Server recurring updates for EastUS infrastructure."
+  subscription_id      = data.azurerm_subscription.current.id
+  policy_definition_id = local.policy_schedule_updates
+  enforce              = false
+  location             = "eastus"
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [module.policy_remediation_identity.id]
+  }
+
+  parameters = jsonencode({
+    maintenanceConfigurationResourceId = {
+      value = var.maintenance_configuration_resource_id
+    }
+    tagValues = {
+      value = [{ key = "Update Ring", value = "Ring 1" }]
+    }
+    locations = {
+      value = ["eastus"]
+    }
+    operatingSystemTypes = {
+      value = ["Windows"]
+    }
+    effect = {
+      value = "DeployIfNotExists"
+    }
+    tagOperator = {
+      value = "Any"
+    }
+    resourceGroups = {
+      value = []
+    }
+  })
+}
+
+resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows" {
+  name                 = "ka-win-check-missing-upd"
+  display_name         = "KA-Windows Server -Check for missing system updates"
+  description          = "Check for missing updates on all KA subscriptions windows servers."
+  subscription_id      = data.azurerm_subscription.current.id
+  policy_definition_id = local.policy_check_missing_updates
+  enforce              = true
+
+  parameters = jsonencode({
+    locations = {
+      value = ["eastus", "southcentralus", "westus2", "westus3", "centralus"]
+    }
+    osType = {
+      value = "Windows"
+    }
+    tagOperator = {
+      value = "Any"
+    }
+    tagValues = {
+      value = []
+    }
+    assessmentMode = {
+      value = "AutomaticByPlatform"
+    }
   })
 }

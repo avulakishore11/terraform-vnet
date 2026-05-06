@@ -18,24 +18,75 @@ variables:
   value: 'tfstate'
 - name: stateKey
   value: 'dev/terraform.tfstate'
-- name: environment
-  value: 'dev'
 - name: varFile
   value: 'environments/dev.tfvars'
 
-# ── Stage template (reused for dev / test / prod) ─────────────────────────────
-# Each stage calls init → validate → plan → apply using the env-specific
-# .tfvars file and a separate state key so environments never share state.
-# admin_password is pulled from an Azure DevOps secret variable group.
-# ─────────────────────────────────────────────────────────────────────────────
-
+# ══════════════════════════════════════════════════════════════════════════════
+# STAGE 1: VALIDATE — runs FIRST on every push. Cheap, fast checks that catch
+# ~60% of bugs before we ever talk to Azure. Fails fast = saves money + time.
+#   - terraform fmt    → code formatting consistency
+#   - tflint           → deprecated syntax, naming rules, Azure best practices
+#   - tfsec            → security misconfigurations (public storage, open NSGs)
+#   - terraform validate → syntax + variable references
+# ══════════════════════════════════════════════════════════════════════════════
 stages:
 
+- stage: Validate
+  displayName: 'Static Validation & Security Scan'
+  jobs:
+  - job: StaticChecks
+    displayName: 'Lint, Format, Security Scan'
+    steps:
+
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: 'latest'
+
+    # ─── Format check ─────────────────────────────────────────────────────
+    # -check : report unformatted files without modifying them
+    # -recursive : check all subdirectories
+    # Fails the pipeline if anyone commits unformatted code (e.g. wrong indentation, misaligned blocks, etc.). before proceeding to further 
+    - script: terraform fmt -check -recursive
+      displayName: 'Terraform Format Check'
+
+    # ─── Syntax + reference validation ────────────────────────────────────
+    # -backend=false skips talking to Azure backend storage account just for syntax check.
+    # Makes this step ~10x faster than a full init.
+    - script: |
+        terraform init -backend=false
+        terraform validate
+      displayName: 'Terraform Validate (syntax)'
+
+    # ─── TFLint ───────────────────────────────────────────────────────────
+    # Catches: deprecated syntax, unused vars, naming convention violations,
+    # Azure-specific anti-patterns (e.g. unsupported VM SKUs in a region).
+    - script: |
+        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        tflint --init
+        tflint --recursive
+      displayName: 'TFLint'
+
+    # ─── tfsec ────────────────────────────────────────────────────────────
+    # Static security scan. Catches things like:
+    #   - Storage accounts allowing public blob access
+    #   - NSG rules with source = *
+    #   - VMs without disk encryption
+    #   - Key Vaults without soft-delete
+    # --soft-fail : report findings but don't fail the build (yet).
+    # Once your codebase is clean, REMOVE --soft-fail to make it a hard gate.
+    - script: |
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+        tfsec . --soft-fail
+      displayName: 'tfsec Security Scan'
+
 # ══════════════════════════════════════════════════════════════════════════════
-# DEV  — runs automatically on every push to feature/updated-with-all-code
+# DEV — runs only if Validate passes. Auto-deploys on every push.
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: Dev
   displayName: 'Deploy to Dev'
+  dependsOn: Validate
+  condition: succeeded('Validate')
 
   jobs:
   - job: TerraformDev
@@ -82,14 +133,13 @@ stages:
         environmentServiceNameAzureRM: $(serviceConnection)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TEST — runs after Dev succeeds; requires manual approval
+# TEST — runs after Dev succeeds; requires manual approval via Environment
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: Test
   displayName: 'Deploy to Test'
   dependsOn: Dev
   condition: succeeded('Dev')
   variables:
-    environment: 'test'
     varFile: 'environments/test.tfvars'
     stateKey: 'test/terraform.tfstate'
 
@@ -144,14 +194,13 @@ stages:
               environmentServiceNameAzureRM: $(serviceConnection)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PROD — runs after Test succeeds; requires manual approval
+# PROD — runs after Test succeeds; requires manual approval via Environment
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: Prod
   displayName: 'Deploy to Prod'
   dependsOn: Test
   condition: succeeded('Test')
   variables:
-    environment: 'prod'
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'
 

@@ -1,6 +1,6 @@
 location    = "eastus"
 environment = "dev"
-project     = "winvm"
+project     = "winvm" # ***this IMP, so confirm with lead before changing, as it is used in naming conventions across all resources and modules***.
 instance    = "01"
 
 tags = {
@@ -48,3 +48,6 @@ os_disk_storage_account_type = "StandardSSD_LRS"
 data_disk_size_gb              = 32
 data_disk_storage_account_type = "StandardSSD_LRS"
 data_disk_lun                  = 0
+
+# Azure Update Manager — copy the full ARM ID from Azure Portal → Maintenance Configurations
+maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."

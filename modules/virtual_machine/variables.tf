@@ -90,10 +90,8 @@ variable "image_version" {
   default     = "latest"
 }
 
-# Tags are a map(string) — key-value pairs applied to the VM resource.
-# Passed in from the root module so all resources share the same tags.
 variable "tags" {
-  description = "Tags applied to the Virtual Machine"
-  type        = map(string)
+  description = "Tags applied to every resource. Must include: CreatedBy, Owner, Department, Environment."
+  type        = map(string)  # map of string key-value pairs for tags
   default     = {}
 }

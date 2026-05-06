@@ -15,8 +15,9 @@ locals {
     "australiasoutheast" = "ause"
     "southeastasia"      = "sea"
     "eastasia"           = "ea"
-  }
+  }                           # the below naming convention is referenced in dev.tfvars
   # suffix = {location_abbr}-{project}{environment}-{instance}
+  
   # full name = {resource_type}{suffix}  e.g. vmeus-winvmdev-01
   suffix = "${local.location_abbr[var.location]}-${var.project}${var.environment}-${var.instance}"
 }
@@ -94,6 +95,14 @@ module "virtual_machine" {
   image_version   = var.image_version
 
   tags = var.tags
+}
+
+module "policy_remediation_identity" {
+  source              = "./modules/managed_identity"
+  name                = "id-policy-remediation-${local.suffix}"
+  location            = var.location
+  resource_group_name = module.resource_group.name
+  tags                = var.tags
 }
 
 module "managed_disk" {

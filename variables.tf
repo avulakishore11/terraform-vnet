@@ -3,13 +3,13 @@
 variable "instance" {
   description = "Two-digit instance number appended to every resource name (e.g. 01, 02)"
   type        = string
-  default     = "01"
+  default     = ""
 }
 
 variable "location" {
   description = "Azure region for all resources (e.g. eastus, westus2). Overridden per environment in dev.tfvars."
   type        = string
-  default     = "eastus"
+  default     = ""
 }
 
 # the var.environment is not referring to the varibale being defined
@@ -35,16 +35,19 @@ variable "project" {
 }
 
 ## Tags variable to allow users to pass in custom tags for the VM. This is a map of string key-value pairs which already defined in the dev.tfvars file, and it will be applied to the VM resource when it's created. You can use this to add metadata such as environment, project, owner, etc., which can help with organization and cost management in Azure.
-
+# Tags are a map(string) — key-value pairs applied to the VM resource.
+# Passed in from the root module so all resources share the same tags.
 variable "tags" {
   description = "Tags applied to every resource. Must include: CreatedBy, Owner, Department, Environment."
   type        = map(string)
   default     = {}
   validation {
     condition = alltrue([
-      for key in ["CreatedBy", "Owner", "Department", "Environment"] :
-      contains(keys(var.tags), key)
-    ])
+      for key in ["CreatedBy", "Owner", "Department", "Environment"]
+      :contains(keys(var.tags), key)
+               #keys map to tags only name/key not the value keys(var.tags)
+              #  contains(keys(var.tags), key)contains(["Environment", "Owner"], "Environment")  → true  ✅
+    ])              # var.tags is the incoming map of tags(modules/variables.tf), keys(var.tags) gives you the list of keys in that map, and contains(keys(var.tags), key) checks if each required key is present in the tags map. The alltrue function ensures that all required keys are included.
     error_message = "tags map must contain all required keys: CreatedBy, Owner, Department, Environment."
   }
 }
@@ -160,6 +163,11 @@ variable "data_disk_storage_account_type" {
   description = "Data disk storage type"
   type        = string
   default     = "Premium_LRS"
+}
+
+variable "maintenance_configuration_resource_id" {
+  description = "ARM resource ID of the Azure Update Manager maintenance configuration used for scheduling Windows updates (Ring 1)."
+  type        = string
 }
 
 variable "data_disk_lun" {
