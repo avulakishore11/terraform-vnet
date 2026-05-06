@@ -6,6 +6,10 @@
 # Required RBAC: the deployment principal needs Owner or Policy Contributor
 # at the subscription scope to create policy assignments.
 
+# To assign permissions to SP RoleUse This When Resource Policy Contributor✅ Recommended — pipeline only manages policies
+# User Access AdministratorAdd this only if policies have DeployIfNotExists or Modify effectsOwner❌ Avoid — too broad, security team will push back
+# Contributor❌ Won't work — explicitly denied for policy operations
+
 data "azurerm_subscription" "current" {}
 
 locals {
