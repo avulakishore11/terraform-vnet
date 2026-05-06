@@ -1,6 +1,6 @@
 resource "azurerm_windows_virtual_machine" "this" {
   name                  = var.vm_name
-  computer_name         = trimright(substr(var.vm_name, 0, 15), "-") # Windows: max 15 chars, no trailing hyphen
+  computer_name         = trim(substr(var.vm_name, 0, 15), "-") # Windows: max 15 chars, no trailing hyphen
   resource_group_name   = var.resource_group_name
   location              = var.location
   size                  = var.vm_size
