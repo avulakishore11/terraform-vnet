@@ -22,7 +22,7 @@ variable "environment" {
     condition     = contains(["dev", "test", "prod"], var.environment) # var.environment  = a runtime input variable, not a compile-time variable definition
     error_message = "environment must be one of: dev, test, prod."
   }
-} 
+} # fmt fix: closing brace had a trailing space; terraform fmt -check treats trailing whitespace as a formatting error.
 
 # So inside validation:
 
@@ -42,9 +42,11 @@ variable "tags" {
   type        = map(string)
   default     = {}
   validation {
-    condition = alltrue([
+    # fmt fix: condition (9 chars) must align its = with error_message (13 chars) — needs 4 padding spaces.
+    # fmt fix: HCL for-expression requires a space after the colon — ": value" not ":value".
+    condition     = alltrue([
       for key in ["CreatedBy", "Owner", "Department", "Environment"]
-      :contains(keys(var.tags), key)
+      : contains(keys(var.tags), key)
                #keys map to tags only name/key not the value keys(var.tags)
               #  contains(keys(var.tags), key)contains(["Environment", "Owner"], "Environment")  → true  ✅
     ])              # var.tags is the incoming map of tags(modules/variables.tf), keys(var.tags) gives you the list of keys in that map, and contains(keys(var.tags), key) checks if each required key is present in the tags map. The alltrue function ensures that all required keys are included.
@@ -56,7 +58,7 @@ variable "tags" {
 
 variable "vnet_address_space" {
   description = "Address space for the Virtual Network (CIDR). type = list(string) because a VNet can have multiple address spaces."
-  type        = list(string) 
+  type        = list(string) # fmt fix: trailing space after list(string) removed — terraform fmt -check fails on trailing whitespace.
 }
 
 variable "subnet_address_prefixes" {
