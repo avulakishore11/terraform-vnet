@@ -20,6 +20,13 @@ variables:
   value: 'dev/terraform.tfstate'
 - name: varFile
   value: 'environments/dev.tfvars'
+# ── Destroy gate ──────────────────────────────────────────────────────────────
+# ENABLE_DESTROY defaults to false so destroy NEVER runs on a normal push.
+# To destroy infrastructure: queue this pipeline manually and set
+# ENABLE_DESTROY=true at queue time. The Destroy stage then requires a second
+# confirmation via Azure DevOps environment approval + ManualValidation task.
+- name: ENABLE_DESTROY
+  value: 'false'
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STAGE 1: VALIDATE — runs FIRST on every push. Cheap, fast checks that catch
@@ -83,10 +90,11 @@ stages:
 # ══════════════════════════════════════════════════════════════════════════════
 # DEV — runs only if Validate passes. Auto-deploys on every push.
 # ══════════════════════════════════════════════════════════════════════════════
+# Deploy stages are skipped when ENABLE_DESTROY=true so only the Destroy stage runs.
 - stage: Dev
   displayName: 'Deploy to Dev'
   dependsOn: Validate
-  condition: succeeded('Validate')
+  condition: and(succeeded('Validate'), ne(variables['ENABLE_DESTROY'], 'true'))
 
   jobs:
   - job: TerraformDev
@@ -131,6 +139,17 @@ stages:
         command: 'apply'
         commandOptions: '-auto-approve tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
+    
+
+    - task: TerraformTaskV4@4
+      displayName: 'Output (Dev)'
+      inputs:
+        provider: 'azurerm'
+        command: 'output'
+        commandOptions: '-json'
+        environmentServiceNameAzureRM: $(serviceConnection)
+    # Destroy is intentionally removed from this job.
+    # Use the dedicated Destroy stage by queuing the pipeline with ENABLE_DESTROY=true.
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TEST — runs after Dev succeeds; requires manual approval via Environment
@@ -138,7 +157,7 @@ stages:
 - stage: Test
   displayName: 'Deploy to Test'
   dependsOn: Dev
-  condition: succeeded('Dev')
+  condition: and(succeeded('Dev'), ne(variables['ENABLE_DESTROY'], 'true'))
   variables:
     varFile: 'environments/test.tfvars'
     stateKey: 'test/terraform.tfstate'
@@ -199,7 +218,7 @@ stages:
 - stage: Prod
   displayName: 'Deploy to Prod'
   dependsOn: Test
-  condition: succeeded('Test')
+  condition: and(succeeded('Test'), ne(variables['ENABLE_DESTROY'], 'true'))
   variables:
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'
@@ -252,4 +271,97 @@ stages:
               provider: 'azurerm'
               command: 'apply'
               commandOptions: '-auto-approve tfplan-prod'
+              environmentServiceNameAzureRM: $(serviceConnection)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DESTROY — never runs on a normal push (ENABLE_DESTROY defaults to false).
+#
+# HOW TO TRIGGER:
+#   1. Queue this pipeline manually in Azure DevOps.
+#   2. Override variable: ENABLE_DESTROY = true
+#   3. Approve the 'destroy-approval' environment gate (set up approvers in
+#      Azure DevOps → Environments → destroy-approval → Approvals & checks).
+#   4. Approve the ManualValidation task inside the stage.
+#
+# Two independent human approvals are required before any resource is deleted.
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: Destroy
+  displayName: 'Destroy Infrastructure'
+  dependsOn: Validate
+  # Condition 1: only runs when ENABLE_DESTROY is explicitly set to 'true' at queue time.
+  # Every normal push leaves ENABLE_DESTROY='false' so this stage is always skipped.
+  condition: and(succeeded('Validate'), eq(variables['ENABLE_DESTROY'], 'true'))
+
+  jobs:
+  - deployment: TerraformDestroy
+    displayName: 'Terraform Destroy'
+    # Condition 2: the 'destroy-approval' environment must have approvers configured
+    # in Azure DevOps → Environments → destroy-approval → Approvals & checks.
+    # The pipeline pauses here until a designated approver clicks Approve.
+    environment: 'destroy-approval'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+
+          - task: TerraformTaskV4@4
+            displayName: 'Init (Destroy)'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: $(serviceConnection)
+              backendAzureRmResourceGroupName: $(backendResourceGroup)
+              backendAzureRmStorageAccountName: $(backendStorageAccount)
+              backendAzureRmContainerName: $(backendContainer)
+              backendAzureRmKey: $(stateKey)
+              commandOptions: '-backend-config="use_azuread_auth=true"'
+
+          # Generate a destroy plan first so approvers can see exactly what
+          # will be deleted before the final ManualValidation gate.
+          - task: TerraformTaskV4@4
+            displayName: 'Plan Destroy (review before approving)'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              commandOptions: '-destroy -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-destroy'
+              environmentServiceNameAzureRM: $(serviceConnection)
+
+          # Condition 3: a human must read the destroy plan above and explicitly
+          # click Resume in the pipeline UI. Timeout = reject (safe default).
+          - task: ManualValidation@0
+            displayName: 'Final confirmation — review destroy plan then approve'
+            inputs:
+              instructions: |
+                ⚠️  DESTRUCTIVE OPERATION — READ BEFORE APPROVING  ⚠️
+
+                The terraform destroy plan has been generated in the step above.
+                Review it carefully in the pipeline logs before proceeding.
+
+                Environment : $(varFile)
+                State key   : $(stateKey)
+                Subscription: $(backendResourceGroup)
+
+                Click Resume only if you are certain every resource listed
+                in the plan should be permanently deleted.
+                Click Reject to abort safely — no resources will be touched.
+              onTimeout: 'reject'
+              timeoutInMinutes: 60
+
+          # -auto-approve is intentional here: all three human gates above
+          # (variable override + environment approval + ManualValidation) have
+          # already confirmed intent. The CLI flag is not the safety mechanism —
+          # the pipeline gates are.
+          - task: TerraformTaskV4@4
+            displayName: 'Destroy'
+            inputs:
+              provider: 'azurerm'
+              command: 'destroy'
+              commandOptions: '-auto-approve -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)"'
               environmentServiceNameAzureRM: $(serviceConnection)

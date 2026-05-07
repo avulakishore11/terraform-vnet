@@ -20,8 +20,9 @@ locals {
   policy_require_tag_on_resource_groups = "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025"
 
   # "Schedule recurring updates using Azure Update Manager"
-  policy_schedule_updates = "/providers/Microsoft.Authorization/policyDefinitions/ba0df93e-e4ac-479a-aac2-134bbae39a1a"
   # "Configure periodic checking for missing system updates on azure virtual machines"
+  
+  policy_schedule_updates = "/providers/Microsoft.Authorization/policyDefinitions/ba0df93e-e4ac-479a-aac2-134bbae39a1a"
   policy_check_missing_updates = "/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15"
 }
 
@@ -65,6 +66,17 @@ resource "azurerm_subscription_policy_assignment" "require_tag_resource_groups" 
 #   AuditIfNotExists → no identity needed, enforce=true (active).
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Grants the managed identity Contributor so DeployIfNotExists remediation tasks
+# can modify VMs (e.g. install the update agent extension).
+#
+# PREREQUISITE: the pipeline service principal needs "User Access Administrator"
+# at subscription scope to create this role assignment. Contributor alone is
+# insufficient — Azure explicitly denies roleAssignments/write for Contributors.
+# Grant it once via:
+#   az role assignment create \
+#     --assignee <pipeline-sp-object-id> \
+#     --role "User Access Administrator" \
+#     --scope /subscriptions/<subscription-id>
 resource "azurerm_role_assignment" "policy_remediation_contributor" {
   scope                = data.azurerm_subscription.current.id
   role_definition_name = "Contributor"
@@ -128,8 +140,11 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
     tagOperator = {
       value = "Any"
     }
+    # tagValues must be an Object (map of tagName→tagValue), NOT an Array.
+    # Policy 59efceea v4.10.0 changed the expected type from Array to Object.
+    # Empty object {} means "no tag filter — apply to all VMs".
     tagValues = {
-      value = []
+      value = {}
     }
     assessmentMode = {
       value = "AutomaticByPlatform"
