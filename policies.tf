@@ -59,11 +59,12 @@ resource "azurerm_subscription_policy_assignment" "require_tag_resource_groups" 
 # Verify policy GUIDs in Azure Portal → Policy → Definitions before applying.
 #
 # Policy 1: Schedule Windows updates EastUS – RING 1
-#   DeployIfNotExists → requires SystemAssigned identity to auto-remediate VMs.
+#   DeployIfNotExists → requires managed identity to auto-remediate VMs.
 #   enforce=false → DoNotEnforce (audit-only).
 #
 # Policy 2: Check for missing system updates
-#   AuditIfNotExists → no identity needed, enforce=true (active).
+#   DeployIfNotExists → also requires managed identity (installs Azure Monitor
+#   Agent via remediation task). enforce=true (active). Reuses same identity.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Grants the managed identity Contributor so DeployIfNotExists remediation tasks
@@ -122,6 +123,9 @@ resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring
   })
 }
 
+# Policy 59efceea uses DeployIfNotExists (installs the Azure Monitor Agent)
+# so a managed identity is required — Azure uses it to run the remediation task.
+# Reuses the same identity as the schedule policy; both need Contributor scope.
 resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows" {
   name                 = "ka-win-check-missing-upd"
   display_name         = "KA-Windows Server -Check for missing system updates"
@@ -129,6 +133,12 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
   subscription_id      = data.azurerm_subscription.current.id
   policy_definition_id = local.policy_check_missing_updates
   enforce              = true
+  location             = "eastus"
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [module.policy_remediation_identity.id]
+  }
 
   parameters = jsonencode({
     locations = {
