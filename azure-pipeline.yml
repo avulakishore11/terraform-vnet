@@ -25,6 +25,7 @@ variables:
 # To destroy infrastructure: queue this pipeline manually and set
 # ENABLE_DESTROY=true at queue time. The Destroy stage then requires a second
 # confirmation via Azure DevOps environment approval + ManualValidation task.
+
 - name: ENABLE_DESTROY
   value: 'false'
 

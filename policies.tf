@@ -6,9 +6,9 @@
 # Required RBAC: the deployment principal needs Owner or Policy Contributor
 # at the subscription scope to create policy assignments.
 
-# To assign permissions to SP RoleUse This When Resource Policy Contributor✅ Recommended — pipeline only manages policies
-# User Access AdministratorAdd this only if policies have DeployIfNotExists or Modify effectsOwner❌ Avoid — too broad, security team will push back
-# Contributor❌ Won't work — explicitly denied for policy operations
+# To assign permissions to SP RoleUse This When Resource Policy Contributor **Recommended** — pipeline only manages policies
+# User Access AdministratorAdd this only if policies have DeployIfNotExists or Modify effectsOwner Avoid — too broad, security team will push back
+# Contributor Won't work — explicitly denied for policy operations
 
 data "azurerm_subscription" "current" {}
 
@@ -80,7 +80,7 @@ resource "azurerm_subscription_policy_assignment" "require_tag_resource_groups" 
 resource "azurerm_role_assignment" "policy_remediation_contributor" {
   scope                = data.azurerm_subscription.current.id
   role_definition_name = "Contributor"
-  principal_id         = module.policy_remediation_identity.principal_id
+  principal_id         = module.policy_remediation_identity.principal_id 
 }
 
 resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring1" {
