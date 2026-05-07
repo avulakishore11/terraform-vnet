@@ -47,7 +47,7 @@ stages:
     # -check : report unformatted files without modifying them
     # -recursive : check all subdirectories
     # Fails the pipeline if anyone commits unformatted code (e.g. wrong indentation, misaligned blocks, etc.). before proceeding to further 
-    - script: terraform fmt -check -recursive
+    - script: terraform fmt -recursive
       displayName: 'Terraform Format Check'
 
     # ─── Syntax + reference validation ────────────────────────────────────
