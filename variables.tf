@@ -9,7 +9,6 @@ variable "instance" {
 variable "location" {
   description = "Azure region for all resources (e.g. eastus, westus2). Overridden per environment in dev.tfvars."
   type        = string
-  default     = ""
 }
 
 # the var.environment is not referring to the varibale being defined
