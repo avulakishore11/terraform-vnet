@@ -108,7 +108,7 @@ module "policy_remediation_identity" {
 
 module "storage_account" {
   source              = "./modules/storage_account"
-  storage_account_name = lower(replace("st${local.suffix}", "-", ""))
+  storage_account_name = lower(replace("st${local.location_abbr[var.location]}-${var.storage_workload}${var.environment}-${var.instance}", "-", ""))
   location            = var.location
   resource_group_name = module.resource_group.name
 

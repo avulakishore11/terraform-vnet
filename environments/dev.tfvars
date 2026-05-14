@@ -51,7 +51,8 @@ data_disk_lun                  = 0
 # Azure Update Manager — copy the full ARM ID from Azure Portal → Maintenance Configurations
 maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
 
-# Storage Account 
+# Storage Account
+storage_workload                 = "hr"          # drives the storage account name: st{location}{workload}{env}{instance}
 storage_account_kind             = "StorageV2"
 storage_account_tier             = "Standard"
 storage_account_replication_type = "ZRS"    # Zone-redundant: survives a full AZ outage

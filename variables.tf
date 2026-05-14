@@ -176,6 +176,11 @@ variable "data_disk_lun" {
 
 # ── Storage Account ───────────────────────────────────────────────────────────
 
+variable "storage_workload" {
+  description = "Team or workload identifier used in the storage account name (e.g. hr, finance, ops). Kept separate from var.project so storage naming is independent of VM naming."
+  type        = string
+}
+
 variable "storage_account_kind" {
   description = "Storage account kind (StorageV2 recommended)"
   type        = string
