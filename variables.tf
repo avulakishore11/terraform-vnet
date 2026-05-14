@@ -43,13 +43,11 @@ variable "tags" {
   validation {
     # fmt fix: condition (9 chars) must align its = with error_message (13 chars) — needs 4 padding spaces.
     # fmt fix: HCL for-expression requires a space after the colon — ": value" not ":value".
-    condition     = alltrue([
-      for key in ["Name", "Description", "Location", "category", "Details"]
+    condition = alltrue([
+      for key in ["Name", "Description", "Location", "Environment", "Project"]
       : contains(keys(var.tags), key)
-               #keys map to tags only name/key not the value keys(var.tags)
-              #  contains(keys(var.tags), key)contains(["Environment", "Owner"], "Environment")  → true  ✅
-    ])              # var.tags is the incoming map of tags(modules/variables.tf), keys(var.tags) gives you the list of keys in that map, and contains(keys(var.tags), key) checks if each required key is present in the tags map. The alltrue function ensures that all required keys are included.
-    error_message = "tags map must contain all required keys: CreatedBy, Owner, Department, Environment."
+    ])
+    error_message = "tags map must contain all required keys: Name, Description, Location, Environment, Project."
   }
 }
 

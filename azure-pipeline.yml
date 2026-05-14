@@ -49,14 +49,13 @@ variables:
 - name: stateKey
   value: 'dev/terraform.tfstate'
 - name: varFile
-  value: 'environments/dev.tfvars
+  value: 'environments/dev.tfvars'
 # Resolved at compile time from the parameter above.
 # Empty string = no -target flag = full deploy.
 # Both targets are listed explicitly — do not rely on Terraform's implicit
 # dependency resolution so it is always obvious exactly what will be deployed.
 - name: targetFlag
   value: ${{ if eq(parameters.deployTarget, 'storage_account') }}-target=module.resource_group -target=module.storage_account${{ end }}
-=======
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -164,7 +163,7 @@ stages:
         # For storage_account target it expands to:
         #   -target=module.resource_group -target=module.storage_account
         # -target is only set in plan; apply receives the plan file which already encodes the scope.
-        commandOptions: '$(targetFlag) -var-file=$(varFile) -out=tfplan-dev' ## -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-dev'
+        commandOptions: '$(targetFlag) -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
 
     - task: TerraformTaskV4@4

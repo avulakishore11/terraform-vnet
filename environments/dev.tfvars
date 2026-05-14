@@ -4,11 +4,11 @@ project     = "winvm" # ***this IMP, so confirm with lead before changing, as it
 instance    = "01"
 
 tags = {
-  Name        = "winvm-${var.environment}-${var.instance}"
-  Description = "Windows VM for ${var.project} project in ${var.environment} environment"
-  Location    = var.location
-  Environment = var.environment
-  Project     = var.project
+  Name        = "winvm-dev-01"
+  Description = "Windows VM for winvm project in dev environment"
+  Location    = "eastus"
+  Environment = "dev"
+  Project     = "winvm"
 }
 
 vnet_address_space      = ["10.1.0.0/16"]
