@@ -54,8 +54,12 @@ variables:
 # Empty string = no -target flag = full deploy.
 # Both targets are listed explicitly — do not rely on Terraform's implicit
 # dependency resolution so it is always obvious exactly what will be deployed.
-- name: targetFlag
-  value: ${{ if eq(parameters.deployTarget, 'storage_account') }}-target=module.resource_group -target=module.storage_account${{ end }}
+- ${{ if eq(parameters.deployTarget, 'storage_account') }}:
+  - name: targetFlag
+    value: '-target=module.resource_group -target=module.storage_account'
+- ${{ else }}:
+  - name: targetFlag
+    value: ''
 
 
 # ══════════════════════════════════════════════════════════════════════════════
