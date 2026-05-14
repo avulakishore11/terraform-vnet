@@ -43,7 +43,7 @@ variables:
 - name: backendResourceGroup
   value: 'kaseya-orgchat'
 - name: backendStorageAccount
-  value: 'saeushrfile'
+  value: 'saeushrdev01'
 - name: backendContainer
   value: 'tfstate'
 - name: stateKey
