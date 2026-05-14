@@ -4,12 +4,11 @@ project     = "winvm" # ***this IMP, so confirm with lead before changing, as it
 instance    = "01"
 
 tags = {
-  Environment = "dev"
-  Project     = "terrafrom"
-  Owner       = "Infra-team/Kishore"
-  ManagedBy   = "terraform"
-  CreatedBy   = "Kishore Avula"
-  Department  = "Infrastructure"
+  Name        = "winvm-${var.environment}-${var.instance}"
+  Description = "Windows VM for ${var.project} project in ${var.environment} environment"
+  Location    = var.location
+  Environment = var.environment
+  Project     = var.project
 }
 
 vnet_address_space      = ["10.1.0.0/16"]

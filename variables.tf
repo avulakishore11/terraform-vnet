@@ -44,7 +44,7 @@ variable "tags" {
     # fmt fix: condition (9 chars) must align its = with error_message (13 chars) — needs 4 padding spaces.
     # fmt fix: HCL for-expression requires a space after the colon — ": value" not ":value".
     condition     = alltrue([
-      for key in ["CreatedBy", "Owner", "Department", "Environment"]
+      for key in ["Name", "Description", "Location", "category", "Details"]
       : contains(keys(var.tags), key)
                #keys map to tags only name/key not the value keys(var.tags)
               #  contains(keys(var.tags), key)contains(["Environment", "Owner"], "Environment")  → true  ✅
