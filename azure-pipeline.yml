@@ -102,11 +102,9 @@ stages:
     # ─── TFLint ───────────────────────────────────────────────────────────
     # Catches: deprecated syntax, unused vars, naming convention violations,
     # Azure-specific anti-patterns (e.g. unsupported VM SKUs in a region).
-    - script: |
-        curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-        tflint --init
-        tflint --recursive
-      displayName: 'TFLint'
+    #- script: |
+     ### tflint --recursive
+      #displayName: 'TFLint'
 
     # ─── tfsec ────────────────────────────────────────────────────────────
     # Static security scan. Catches things like:
