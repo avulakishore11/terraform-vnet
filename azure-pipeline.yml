@@ -148,7 +148,7 @@ stages:
         backendAzureRmStorageAccountName: $(backendStorageAccount)
         backendAzureRmContainerName: $(backendContainer)
         backendAzureRmKey: $(stateKey)
-        commandOptions: '-backend-config="use_azuread_auth=true"'
+        commandOptions: ''
 
     - task: TerraformTaskV4@4
       displayName: 'Validate (Dev)'
@@ -224,7 +224,7 @@ stages:
               backendAzureRmStorageAccountName: $(backendStorageAccount)
               backendAzureRmContainerName: $(backendContainer)
               backendAzureRmKey: $(stateKey)
-              commandOptions: '-backend-config="use_azuread_auth=true"'
+              commandOptions: ''
 
           - task: TerraformTaskV4@4
             displayName: 'Validate (Test)'
@@ -285,7 +285,7 @@ stages:
               backendAzureRmStorageAccountName: $(backendStorageAccount)
               backendAzureRmContainerName: $(backendContainer)
               backendAzureRmKey: $(stateKey)
-              commandOptions: '-backend-config="use_azuread_auth=true"'
+              commandOptions: ''
 
           - task: TerraformTaskV4@4
             displayName: 'Validate (Prod)'
@@ -379,7 +379,7 @@ stages:
         backendAzureRmStorageAccountName: $(backendStorageAccount)
         backendAzureRmContainerName: $(backendContainer)
         backendAzureRmKey: $(stateKey)
-        commandOptions: '-backend-config="use_azuread_auth=true"'
+        commandOptions: ''
 
     # Plan -destroy so the pipeline logs show exactly what will be deleted.
     # The human already approved above; this is an audit record, not another gate.
