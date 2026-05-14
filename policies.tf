@@ -6,9 +6,9 @@
 # Required RBAC: the deployment principal needs Owner or Policy Contributor
 # at the subscription scope to create policy assignments.
 
-# To assign permissions to SP RoleUse This When Resource Policy Contributor✅ Recommended — pipeline only manages policies
-# User Access AdministratorAdd this only if policies have DeployIfNotExists or Modify effectsOwner❌ Avoid — too broad, security team will push back
-# Contributor❌ Won't work — explicitly denied for policy operations
+# To assign permissions to SP RoleUse This When Resource Policy Contributor **Recommended** — pipeline only manages policies
+# User Access AdministratorAdd this only if policies have DeployIfNotExists or Modify effectsOwner Avoid — too broad, security team will push back
+# Contributor Won't work — explicitly denied for policy operations
 
 data "azurerm_subscription" "current" {}
 
@@ -20,8 +20,9 @@ locals {
   policy_require_tag_on_resource_groups = "/providers/Microsoft.Authorization/policyDefinitions/96670d01-0a4d-4649-9c89-2d3abc0a5025"
 
   # "Schedule recurring updates using Azure Update Manager"
-  policy_schedule_updates = "/providers/Microsoft.Authorization/policyDefinitions/ba0df93e-e4ac-479a-aac2-134bbae39a1a"
   # "Configure periodic checking for missing system updates on azure virtual machines"
+  
+  policy_schedule_updates = "/providers/Microsoft.Authorization/policyDefinitions/ba0df93e-e4ac-479a-aac2-134bbae39a1a"
   policy_check_missing_updates = "/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15"
 }
 
@@ -58,17 +59,29 @@ resource "azurerm_subscription_policy_assignment" "require_tag_resource_groups" 
 # Verify policy GUIDs in Azure Portal → Policy → Definitions before applying.
 #
 # Policy 1: Schedule Windows updates EastUS – RING 1
-#   DeployIfNotExists → requires SystemAssigned identity to auto-remediate VMs.
+#   DeployIfNotExists → requires managed identity to auto-remediate VMs.
 #   enforce=false → DoNotEnforce (audit-only).
 #
 # Policy 2: Check for missing system updates
-#   AuditIfNotExists → no identity needed, enforce=true (active).
+#   DeployIfNotExists → also requires managed identity (installs Azure Monitor
+#   Agent via remediation task). enforce=true (active). Reuses same identity.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Grants the managed identity Contributor so DeployIfNotExists remediation tasks
+# can modify VMs (e.g. install the update agent extension).
+#
+# PREREQUISITE: the pipeline service principal needs "User Access Administrator"
+# at subscription scope to create this role assignment. Contributor alone is
+# insufficient — Azure explicitly denies roleAssignments/write for Contributors.
+# Grant it once via:
+#   az role assignment create \
+#     --assignee <pipeline-sp-object-id> \
+#     --role "User Access Administrator" \
+#     --scope /subscriptions/<subscription-id>
 resource "azurerm_role_assignment" "policy_remediation_contributor" {
   scope                = data.azurerm_subscription.current.id
   role_definition_name = "Contributor"
-  principal_id         = module.policy_remediation_identity.principal_id
+  principal_id         = module.policy_remediation_identity.principal_id 
 }
 
 resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring1" {
@@ -110,6 +123,9 @@ resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring
   })
 }
 
+# Policy 59efceea uses DeployIfNotExists (installs the Azure Monitor Agent)
+# so a managed identity is required — Azure uses it to run the remediation task.
+# Reuses the same identity as the schedule policy; both need Contributor scope.
 resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows" {
   name                 = "ka-win-check-missing-upd"
   display_name         = "KA-Windows Server -Check for missing system updates"
@@ -117,6 +133,12 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
   subscription_id      = data.azurerm_subscription.current.id
   policy_definition_id = local.policy_check_missing_updates
   enforce              = true
+  location             = "eastus"
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [module.policy_remediation_identity.id]
+  }
 
   parameters = jsonencode({
     locations = {
@@ -128,8 +150,11 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
     tagOperator = {
       value = "Any"
     }
+    # tagValues must be an Object (map of tagName→tagValue), NOT an Array.
+    # Policy 59efceea v4.10.0 changed the expected type from Array to Object.
+    # Empty object {} means "no tag filter — apply to all VMs".
     tagValues = {
-      value = []
+      value = {}
     }
     assessmentMode = {
       value = "AutomaticByPlatform"

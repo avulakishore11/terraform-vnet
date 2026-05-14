@@ -17,7 +17,8 @@ locals {
     "eastasia"           = "ea"
   }                           # the below naming convention is referenced in dev.tfvars
   # suffix = {location_abbr}-{project}{environment}-{instance}
-  
+
+  # fmt fix: blank line above had 2 trailing spaces; terraform fmt -check fails on trailing whitespace.
   # full name = {resource_type}{suffix}  e.g. vmeus-winvmdev-01
   suffix = "${local.location_abbr[var.location]}-${var.project}${var.environment}-${var.instance}"
 }

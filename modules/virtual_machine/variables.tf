@@ -8,9 +8,11 @@
 
 ## description = Helps humans understand purpose. Has no effect on deployment.
 
+# fmt fix: inline comments after a value must be separated by exactly 1 space before #.
+#          Previously had 2 spaces (e.g. `string  # ...`); terraform fmt normalises to 1 space.
 variable "resource_group_name" {
   description = "Name of the Resource Group where the VM will be deployed"
-  type        = string  # Note: type must NOT be quoted — string not "string"
+  type        = string # Note: type must NOT be quoted — string not "string"
 }
 
 variable "location" {
@@ -31,7 +33,7 @@ variable "vm_size" {
 variable "admin_username" {
   description = "Local administrator username"
   type        = string
-  sensitive   = true  # won't appear in plan/apply output or logs
+  sensitive   = true # won't appear in plan/apply output or logs
 }
 
 variable "admin_password" {
@@ -92,6 +94,8 @@ variable "image_version" {
 
 variable "tags" {
   description = "Tags applied to every resource. Must include: CreatedBy, Owner, Department, Environment."
-  type        = map(string)  # map of string key-value pairs for tags
+  type        = map(string) # map of string key-value pairs for tags
   default     = {}
 }
+# fmt fix: file previously had no trailing newline; terraform fmt requires every .tf file
+#          to end with a newline character.
