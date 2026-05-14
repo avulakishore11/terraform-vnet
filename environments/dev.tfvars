@@ -51,3 +51,29 @@ data_disk_lun                  = 0
 
 # Azure Update Manager — copy the full ARM ID from Azure Portal → Maintenance Configurations
 maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
+
+# Storage Account 
+storage_account_kind             = "StorageV2"
+storage_account_tier             = "Standard"
+storage_account_replication_type = "ZRS"    # Zone-redundant: survives a full AZ outage
+storage_access_tier              = "Hot"    # Optimised for frequent reads/writes
+
+storage_public_network_access_enabled = true   # must be true for ip_rules to take effect
+storage_shared_access_key_enabled     = true   # set false to enforce Azure AD-only auth
+
+blob_soft_delete_retention_days      = 7
+container_soft_delete_retention_days = 7
+storage_versioning_enabled           = false   # enable if you need point-in-time blob recovery
+
+# Storage Firewall — allowed public IPs
+# Rules: bare IPv4 only (no /31 or /32 CIDR), no RFC-1918 private ranges.
+# To add a new IP: append to the list, raise a PR for review.
+# To add VNet access: use storage_subnet_ids with the subnet's Service Endpoint instead.
+storage_ip_rules = [
+  "170.55.159.52",  #— dev workstation (added 2026-05-14)
+  # "x.x.x.x",     # <Name> — <purpose> (added YYYY-MM-DD)
+  # "x.x.x.x",     # <Name> — <purpose> (added YYYY-MM-DD)
+]
+
+# storage_subnet_ids   = []               # add subnet resource IDs for VNet Service Endpoint access
+storage_network_bypass = ["AzureServices"] # allows Monitor, Backup, Site Recovery etc.

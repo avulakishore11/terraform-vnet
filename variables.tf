@@ -174,3 +174,77 @@ variable "data_disk_lun" {
   description = "Logical Unit Number for the data disk"
   type        = number
 }
+
+# ── Storage Account ───────────────────────────────────────────────────────────
+
+variable "storage_account_kind" {
+  description = "Storage account kind (StorageV2 recommended)"
+  type        = string
+  default     = "StorageV2"
+}
+
+variable "storage_account_tier" {
+  description = "Performance tier — Standard is required for ZRS"
+  type        = string
+  default     = "Standard"
+}
+
+variable "storage_account_replication_type" {
+  description = "Replication strategy (LRS | ZRS | GRS | GZRS | RA-GRS | RA-GZRS)"
+  type        = string
+  default     = "ZRS"
+}
+
+variable "storage_access_tier" {
+  description = "Default blob access tier (Hot | Cool)"
+  type        = string
+  default     = "Hot"
+}
+
+variable "storage_public_network_access_enabled" {
+  description = "Allow public internet access. Disable for private workloads."
+  type        = bool
+  default     = false
+}
+
+variable "storage_shared_access_key_enabled" {
+  description = "Enable storage account key (SAS) auth. Set false to enforce Azure AD only."
+  type        = bool
+  default     = true
+}
+
+variable "blob_soft_delete_retention_days" {
+  description = "Blob soft-delete retention in days (1-365)"
+  type        = number
+  default     = 7
+}
+
+variable "container_soft_delete_retention_days" {
+  description = "Container soft-delete retention in days (1-365)"
+  type        = number
+  default     = 7
+}
+
+variable "storage_versioning_enabled" {
+  description = "Enable blob versioning"
+  type        = bool
+  default     = false
+}
+
+variable "storage_ip_rules" {
+  description = "Public IPs or CIDRs (max /30) allowed through the storage firewall. See module variable for full guidance."
+  type        = list(string)
+  default     = []
+}
+
+variable "storage_subnet_ids" {
+  description = "VNet subnet IDs allowed via Service Endpoint (for private VNet access)"
+  type        = list(string)
+  default     = []
+}
+
+variable "storage_network_bypass" {
+  description = "Azure services that bypass the storage firewall (AzureServices | Logging | Metrics | None)"
+  type        = list(string)
+  default     = ["AzureServices"]
+}

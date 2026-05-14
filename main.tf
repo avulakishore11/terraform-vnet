@@ -105,6 +105,29 @@ module "policy_remediation_identity" {
   tags                = var.tags
 }
 
+module "storage_account" {
+  source              = "./modules/storage_account"
+  storage_account_name = lower(replace("st${local.suffix}", "-", ""))
+  location            = var.location
+  resource_group_name = module.resource_group.name
+
+  account_kind                     = var.storage_account_kind
+  account_tier                     = var.storage_account_tier
+  account_replication_type         = var.storage_account_replication_type
+  access_tier                      = var.storage_access_tier
+  public_network_access_enabled    = var.storage_public_network_access_enabled
+  shared_access_key_enabled        = var.storage_shared_access_key_enabled
+  blob_soft_delete_retention_days      = var.blob_soft_delete_retention_days
+  container_soft_delete_retention_days = var.container_soft_delete_retention_days
+  versioning_enabled                   = var.storage_versioning_enabled
+
+  network_rules_ip_rules   = var.storage_ip_rules
+  network_rules_subnet_ids = var.storage_subnet_ids
+  network_rules_bypass     = var.storage_network_bypass
+
+  tags = var.tags
+}
+
 module "managed_disk" {
   source               = "./modules/managed_disk"
   disk_name            = "disk${local.suffix}"
