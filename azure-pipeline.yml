@@ -39,7 +39,7 @@ parameters:
 variables:
 - group: Windows_VM_Credentials   # contains: admin_username (plain) and admin_password (secret)
 - name: serviceConnection
-  value: 'Azure-to-ADO-svc-connection'
+  value: 'Azure-to-ADO-svc-coonection'
 - name: backendResourceGroup
   value: 'kaseya-orgchat'
 - name: backendStorageAccount
