@@ -57,7 +57,7 @@ variables:
 - ${{ if eq(parameters.deployTarget, 'storage_account') }}:
   - name: targetFlag
     value: '-target=module.resource_group -target=module.storage_account'
-- ${{ else }}:
+- ${{ if ne(parameters.deployTarget, 'storage_account') }}:
   - name: targetFlag
     value: ''
 
@@ -88,7 +88,7 @@ stages:
     # -check : report unformatted files without modifying them
     # -recursive : check all subdirectories
     # Fails the pipeline if anyone commits unformatted code (e.g. wrong indentation, misaligned blocks, etc.). before proceeding to further 
-    - script: terraform fmt -recursive
+    - script: terraform fmt -check -recursive
       displayName: 'Terraform Format Check'
 
     # ─── Syntax + reference validation ────────────────────────────────────
